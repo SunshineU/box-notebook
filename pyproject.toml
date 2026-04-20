@@ -1,0 +1,15 @@
+[project]
+name = "storage-box"
+version = "0.1.0"
+description = "收纳记录管理系统"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.136.0",
+    "pandas>=3.0.2",
+    "pydantic>=2.13.2",
+    "uvicorn>=0.44.0",
+]
+
+[project.scripts]
+start = "uvicorn src.storage_box.main:app --reload --host 0.0.0.0 --port 8000"

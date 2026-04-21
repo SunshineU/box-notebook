@@ -2,6 +2,16 @@
   <div class="container">
     <h1>📦 收纳记录管理</h1>
 
+    <!-- 视图切换 -->
+    <div class="view-tabs">
+      <button :class="['tab', { active: currentView === 'list' }]" @click="currentView = 'list'">
+        📋 列表视图
+      </button>
+      <button :class="['tab', { active: currentView === 'dashboard' }]" @click="currentView = 'dashboard'">
+        📊 数据看板
+      </button>
+    </div>
+
     <div class="toolbar">
       <input
         v-model="searchKeyword"
@@ -12,12 +22,63 @@
       <button @click="showForm = true" class="btn-primary">+ 新增物品</button>
     </div>
 
-    <div class="stats" v-if="items.length > 0">
-      <span>共 {{ items.length }} 件物品</span>
-      <span>总数量：{{ totalQuantity }} 件</span>
+    <!-- 数据看板视图 -->
+    <div v-if="currentView === 'dashboard'" class="dashboard">
+      <!-- 统计卡片 -->
+      <div class="stats-cards">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ items.length }}</div>
+            <div class="stat-label">物品种类</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔢</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ totalQuantity }}</div>
+            <div class="stat-label">物品总数</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏷️</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ categories.length }}</div>
+            <div class="stat-label">分类数量</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📍</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ locations.length }}</div>
+            <div class="stat-label">存放位置</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 图表区域 -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>📌 分类分布</h3>
+          <Pie :data="categoryChartData" :options="chartOptions" />
+        </div>
+        <div class="chart-card">
+          <h3>📍 位置分布</h3>
+          <Bar :data="locationChartData" :options="chartOptions" />
+        </div>
+        <div class="chart-card">
+          <h3>📊 分类数量排行</h3>
+          <Bar :data="categoryQuantityChartData" :options="chartOptions" />
+        </div>
+        <div class="chart-card">
+          <h3>🏷️ 位置容量分布</h3>
+          <Pie :data="locationQuantityChartData" :options="chartOptions" />
+        </div>
+      </div>
     </div>
 
-    <div class="table-container">
+    <!-- 列表视图 -->
+    <div v-if="currentView === 'list'" class="table-container">
       <table v-if="items.length > 0">
         <thead>
           <tr>
@@ -87,15 +148,47 @@
 
 <script>
 import axios from 'axios'
+import { Pie, Bar } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale
+} from 'chart.js'
+
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale
+)
 
 const API_BASE = '/api'
 
+// 颜色 palette
+const colors = [
+  '#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0',
+  '#00BCD4', '#FF5722', '#795548', '#607D8B', '#3F51B5'
+]
+
 export default {
   name: 'App',
+  components: {
+    Pie,
+    Bar
+  },
   data() {
     return {
       items: [],
       searchKeyword: '',
+      currentView: 'list',
       showForm: false,
       editingItem: null,
       form: {
@@ -104,12 +197,82 @@ export default {
         location: '',
         quantity: 1,
         notes: ''
+      },
+      chartOptions: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
       }
     }
   },
   computed: {
     totalQuantity() {
       return this.items.reduce((sum, item) => sum + item.quantity, 0)
+    },
+    categories() {
+      return [...new Set(this.items.map(i => i.category))]
+    },
+    locations() {
+      return [...new Set(this.items.map(i => i.location))]
+    },
+    categoryChartData() {
+      const categoryCount = {}
+      this.items.forEach(item => {
+        categoryCount[item.category] = (categoryCount[item.category] || 0) + 1
+      })
+      return {
+        labels: Object.keys(categoryCount),
+        datasets: [{
+          data: Object.values(categoryCount),
+          backgroundColor: colors.slice(0, Object.keys(categoryCount).length)
+        }]
+      }
+    },
+    locationChartData() {
+      const locationCount = {}
+      this.items.forEach(item => {
+        locationCount[item.location] = (locationCount[item.location] || 0) + 1
+      })
+      return {
+        labels: Object.keys(locationCount),
+        datasets: [{
+          label: '物品数',
+          data: Object.values(locationCount),
+          backgroundColor: colors.slice(0, Object.keys(locationCount).length)
+        }]
+      }
+    },
+    categoryQuantityChartData() {
+      const categoryQty = {}
+      this.items.forEach(item => {
+        categoryQty[item.category] = (categoryQty[item.category] || 0) + item.quantity
+      })
+      const entries = Object.entries(categoryQty).sort((a, b) => b[1] - a[1])
+      return {
+        labels: entries.map(e => e[0]),
+        datasets: [{
+          label: '总数量',
+          data: entries.map(e => e[1]),
+          backgroundColor: colors.slice(0, entries.length)
+        }]
+      }
+    },
+    locationQuantityChartData() {
+      const locationQty = {}
+      this.items.forEach(item => {
+        locationQty[item.location] = (locationQty[item.location] || 0) + item.quantity
+      })
+      return {
+        labels: Object.keys(locationQty),
+        datasets: [{
+          data: Object.values(locationQty),
+          backgroundColor: colors.slice(0, Object.keys(locationQty).length)
+        }]
+      }
     }
   },
   mounted() {
@@ -204,6 +367,34 @@ h1 {
   margin-bottom: 20px;
 }
 
+/* 视图切换标签 */
+.view-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  justify-content: center;
+}
+
+.tab {
+  padding: 10px 20px;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  border-color: #4CAF50;
+}
+
+.tab.active {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
 .toolbar {
   display: flex;
   gap: 10px;
@@ -232,12 +423,67 @@ h1 {
   background: #45a049;
 }
 
-.stats {
+/* 数据看板样式 */
+.dashboard {
   display: flex;
+  flex-direction: column;
   gap: 20px;
-  margin-bottom: 15px;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-icon {
+  font-size: 36px;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+}
+
+.stat-label {
+  font-size: 13px;
   color: #666;
-  font-size: 14px;
+  margin-top: 2px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.chart-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.chart-card h3 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 16px;
 }
 
 .table-container {
@@ -324,6 +570,8 @@ th {
   padding: 24px;
   width: 100%;
   max-width: 450px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal h2 {

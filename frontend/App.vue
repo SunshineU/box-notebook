@@ -720,4 +720,145 @@ th {
 .form-row .form-group {
   flex: 1;
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .btn-primary {
+    width: 100%;
+  }
+
+  .view-tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  /* 表格横向滚动 */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 700px;
+    font-size: 13px;
+  }
+
+  th, td {
+    padding: 8px 10px;
+  }
+
+  .btn-edit, .btn-delete {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  /* 统计卡片 */
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-icon {
+    font-size: 28px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  /* 图表 */
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-card {
+    padding: 15px;
+  }
+
+  .chart-card h3 {
+    font-size: 14px;
+  }
+
+  /* 表单 */
+  .modal {
+    max-width: 95%;
+    padding: 16px;
+    margin: 10px;
+  }
+
+  .modal h2 {
+    font-size: 18px;
+  }
+
+  .form-group label {
+    font-size: 13px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 14px; /* 防止 iOS 自动缩放 */
+  }
+
+  .quick-tag {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+    padding: 12px;
+  }
+}
+
+/* 小屏幕手机 */
+@media (max-width: 375px) {
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .tab {
+    min-width: 100%;
+  }
+
+  table {
+    min-width: 650px;
+    font-size: 12px;
+  }
+}
 </style>

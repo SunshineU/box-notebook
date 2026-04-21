@@ -5,11 +5,12 @@ description = "收纳记录管理系统"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "bcrypt>=5.0.0",
     "fastapi>=0.136.0",
     "pandas>=3.0.2",
-    "passlib[bcrypt]>=1.7.4",
     "pydantic>=2.13.2",
     "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.26",
     "uvicorn>=0.44.0",
 ]
 

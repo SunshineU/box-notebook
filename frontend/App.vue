@@ -16,7 +16,8 @@
       <input
         v-model="searchKeyword"
         @input="searchItems"
-        placeholder="搜索物品名称、分类、位置..."
+        @keydown.enter="quickAdd"
+        placeholder="搜索物品名称、分类、位置... (回车快速新增)"
         class="search-input"
       />
       <button @click="showForm = true" class="btn-primary">+ 新增物品</button>
@@ -92,7 +93,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in items" :key="item.id">
+          <tr v-for="item in items" :key="item.id" @dblclick="editItem(item)" class="clickable-row">
             <td>{{ item.id }}</td>
             <td>{{ item.name }}</td>
             <td><span class="tag">{{ item.category }}</span></td>
@@ -100,7 +101,7 @@
             <td>{{ item.quantity }}</td>
             <td class="notes">{{ item.notes }}</td>
             <td>
-              <button @click="editItem(item)" class="btn-edit">编辑</button>
+              <button @click="editItem(item)" class="btn-edit" title="双击也可编辑">编辑</button>
               <button @click="deleteItem(item.id)" class="btn-delete">删除</button>
             </td>
           </tr>
@@ -118,27 +119,43 @@
         <form @submit.prevent="submitForm">
           <div class="form-group">
             <label>名称 *</label>
-            <input v-model="form.name" required />
+            <input v-model="form.name" ref="nameInput" required placeholder="输入名称后回车可快速保存" />
           </div>
           <div class="form-group">
             <label>分类 *</label>
-            <input v-model="form.category" required placeholder="如：文具、工具、衣物..." />
+            <div class="input-with-quick">
+              <input v-model="form.category" required placeholder="如：文具、工具、衣物..." />
+              <div class="quick-select">
+                <span v-for="cat in commonCategories" :key="cat" @click="form.category = cat" class="quick-tag">
+                  {{ cat }}
+                </span>
+              </div>
+            </div>
           </div>
           <div class="form-group">
             <label>位置 *</label>
-            <input v-model="form.location" required placeholder="如：A 区 -1 层 -2 号" />
+            <div class="input-with-quick">
+              <input v-model="form.location" required placeholder="如：A 区 -1 层 -2 号" />
+              <div class="quick-select">
+                <span v-for="loc in commonLocations" :key="loc" @click="form.location = loc" class="quick-tag">
+                  {{ loc }}
+                </span>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>数量</label>
-            <input v-model.number="form.quantity" type="number" min="1" />
+          <div class="form-row">
+            <div class="form-group">
+              <label>数量</label>
+              <input v-model.number="form.quantity" type="number" min="1" />
+            </div>
           </div>
           <div class="form-group">
             <label>备注</label>
-            <textarea v-model="form.notes" rows="3"></textarea>
+            <textarea v-model="form.notes" rows="2" placeholder="可选"></textarea>
           </div>
           <div class="form-actions">
-            <button type="button" @click="closeForm" class="btn-cancel">取消</button>
-            <button type="submit" class="btn-primary">确定</button>
+            <button type="button" @click="closeForm" class="btn-cancel">取消 (Esc)</button>
+            <button type="submit" class="btn-primary">💾 保存 (Enter)</button>
           </div>
         </form>
       </div>
@@ -219,6 +236,28 @@ export default {
     locations() {
       return [...new Set(this.items.map(i => i.location))]
     },
+    // 常用分类（出现次数最多的前 5 个）
+    commonCategories() {
+      const count = {}
+      this.items.forEach(item => {
+        count[item.category] = (count[item.category] || 0) + 1
+      })
+      return Object.entries(count)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(e => e[0])
+    },
+    // 常用位置（出现次数最多的前 5 个）
+    commonLocations() {
+      const count = {}
+      this.items.forEach(item => {
+        count[item.location] = (count[item.location] || 0) + 1
+      })
+      return Object.entries(count)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(e => e[0])
+    },
     categoryChartData() {
       const categoryCount = {}
       this.items.forEach(item => {
@@ -277,6 +316,12 @@ export default {
   },
   mounted() {
     this.loadItems()
+    // 监听 Esc 键关闭表单
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.showForm) {
+        this.closeForm()
+      }
+    })
   },
   methods: {
     async loadItems() {
@@ -301,6 +346,19 @@ export default {
         console.error('搜索失败:', err)
       }
     },
+    // 快速新增：使用搜索词作为名称
+    quickAdd() {
+      const keyword = this.searchKeyword.trim()
+      if (!keyword) return
+      this.form = {
+        name: keyword,
+        category: this.commonCategories[0] || '',
+        location: this.commonLocations[0] || '',
+        quantity: 1,
+        notes: ''
+      }
+      this.showForm = true
+    },
     editItem(item) {
       this.editingItem = item
       this.form = {
@@ -311,6 +369,9 @@ export default {
         notes: item.notes || ''
       }
       this.showForm = true
+      this.$nextTick(() => {
+        this.$refs.nameInput?.focus()
+      })
     },
     closeForm() {
       this.showForm = false
@@ -612,5 +673,51 @@ th {
   padding: 10px 20px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* 可点击的行 */
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: #f5f5f5;
+}
+
+/* 快速选择标签 */
+.input-with-quick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quick-tag {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-tag:hover {
+  background: #1976d2;
+  color: white;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+}
+
+.form-row .form-group {
+  flex: 1;
 }
 </style>

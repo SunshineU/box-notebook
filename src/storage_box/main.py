@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Annotated
 from datetime import timedelta
+from fastapi.responses import JSONResponse, Response as FastAPIResponse
 
 from .schemas import UserCreate, UserLogin, Token, Item, ItemCreate, ItemUpdate
 from .user_storage import UserStorage
@@ -136,8 +137,8 @@ async def get_me(current_user: Annotated[dict, Depends(get_current_user)]):
 # ============== 物品管理接口 ==============
 @app.get("/items", tags=["物品管理"])
 def get_all_items(
-    keyword: str | None = None,
-    current_user: Annotated[dict, Depends(get_current_user)]
+    current_user: Annotated[dict, Depends(get_current_user)],
+    keyword: str | None = None
 ):
     """获取所有物品，支持关键词搜索"""
     user_id = current_user["user_id"]
@@ -192,3 +193,39 @@ def delete_item(
     if not item_storage.delete(item_id, user_id):
         raise HTTPException(status_code=404, detail="物品不存在")
     return {"message": "删除成功"}
+
+
+# ============== 导入/导出接口 ==============
+@app.get("/items/export/csv", tags=["导入/导出"])
+def export_items_csv(
+    current_user: Annotated[dict, Depends(get_current_user)]
+):
+    """导出物品数据为 CSV 文件"""
+    user_id = current_user["user_id"]
+    csv_content = item_storage.export_to_csv(user_id)
+    if not csv_content:
+        raise HTTPException(status_code=404, detail="没有可导出的数据")
+
+    response = FastAPIResponse(content=csv_content, media_type="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=items.csv"
+    return response
+
+
+@app.post("/items/import", tags=["导入/导出"])
+async def import_items(
+    file: UploadFile = File(...),
+    current_user: Annotated[dict, Depends(get_current_user)] = None
+):
+    """从 CSV 文件导入物品数据"""
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="请上传 CSV 文件")
+
+    try:
+        content = await file.read()
+        csv_content = content.decode('utf-8')
+        result = item_storage.import_from_csv(csv_content, current_user["user_id"])
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"导入失败：{str(e)}")

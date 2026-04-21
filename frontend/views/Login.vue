@@ -41,7 +41,7 @@
 </template>
 
 <script>
-import { authAPI } from '../api.js'
+import { authAPI } from '../services.js'
 
 export default {
   name: 'Login',

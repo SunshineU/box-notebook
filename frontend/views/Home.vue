@@ -26,6 +26,8 @@
         placeholder="搜索物品名称、分类、位置... (回车快速新增)"
         class="search-input"
       />
+      <button @click="exportCSV" class="btn-secondary">📥 导出</button>
+      <button @click="showImportModal = true" class="btn-secondary">📤 导入</button>
       <button @click="showForm = true" class="btn-primary">+ 新增物品</button>
     </div>
 
@@ -166,11 +168,35 @@
         </form>
       </div>
     </div>
+
+    <!-- 导入弹窗 -->
+    <div v-if="showImportModal" class="modal-overlay" @click.self="closeImportModal">
+      <div class="modal">
+        <h2>📤 导入物品数据</h2>
+        <div class="import-content">
+          <p class="import-hint">请上传 CSV 文件，文件需包含以下列：name, category, location</p>
+          <p class="import-hint-small">可选列：quantity (默认 1), notes (默认空)</p>
+          <input
+            type="file"
+            ref="fileInput"
+            accept=".csv"
+            @change="onFileSelect"
+            class="file-input"
+          />
+          <div v-if="importError" class="error-message">{{ importError }}</div>
+          <div v-if="importSuccess" class="success-message">✅ 成功导入 {{ importSuccess }} 条记录</div>
+        </div>
+        <div class="form-actions">
+          <button type="button" @click="closeImportModal" class="btn-cancel">取消</button>
+          <button type="button" @click="uploadFile" class="btn-primary" :disabled="!selectedFile">上传</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { itemAPI } from '../api.js'
+import { itemAPI } from '../services.js'
 import { Pie, Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -211,6 +237,7 @@ export default {
       searchKeyword: '',
       currentView: 'list',
       showForm: false,
+      showImportModal: false,
       editingItem: null,
       form: {
         name: '',
@@ -219,6 +246,9 @@ export default {
         quantity: 1,
         notes: ''
       },
+      selectedFile: null,
+      importError: '',
+      importSuccess: '',
       username: localStorage.getItem('username') || '用户',
       chartOptions: {
         responsive: true,
@@ -407,6 +437,67 @@ export default {
       } catch (err) {
         console.error('删除失败:', err)
       }
+    },
+    // 导出 CSV
+    async exportCSV() {
+      try {
+        const res = await itemAPI.exportCSV()
+        // 创建下载链接
+        const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `items_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } catch (err) {
+        console.error('导出失败:', err)
+        if (err.response?.status === 404) {
+          alert('没有可导出的数据')
+        } else {
+          alert('导出失败，请重试')
+        }
+      }
+    },
+    // 导入相关方法
+    closeImportModal() {
+      this.showImportModal = false
+      this.selectedFile = null
+      this.importError = ''
+      this.importSuccess = ''
+      if (this.$refs.fileInput) {
+        this.$refs.fileInput.value = ''
+      }
+    },
+    onFileSelect(event) {
+      const file = event.target.files[0]
+      if (file && file.name.endsWith('.csv')) {
+        this.selectedFile = file
+        this.importError = ''
+        this.importSuccess = ''
+      } else {
+        this.importError = '请选择 CSV 文件'
+        this.selectedFile = null
+      }
+    },
+    async uploadFile() {
+      if (!this.selectedFile) return
+      try {
+        const res = await itemAPI.importCSV(this.selectedFile)
+        this.importSuccess = res.data.imported
+        this.importError = ''
+        // 成功后关闭弹窗并刷新列表
+        setTimeout(() => {
+          this.closeImportModal()
+          this.loadItems()
+        }, 1500)
+      } catch (err) {
+        console.error('导入失败:', err)
+        this.importError = err.response?.data?.detail || '导入失败，请重试'
+        this.importSuccess = ''
+      }
     }
   }
 }
@@ -524,6 +615,25 @@ body {
 
 .btn-primary:hover {
   background: #45a049;
+}
+
+.btn-secondary {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-secondary:hover {
+  background: #1976d2;
+}
+
+.btn-secondary:disabled {
+  background: #bdbdbd;
+  cursor: not-allowed;
 }
 
 /* 数据看板样式 */
@@ -715,6 +825,54 @@ th {
   padding: 10px 20px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* 导入弹窗样式 */
+.import-content {
+  padding: 10px 0;
+}
+
+.import-hint {
+  color: #333;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.import-hint-small {
+  color: #666;
+  font-size: 12px;
+  margin-bottom: 15px;
+}
+
+.file-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px dashed #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.file-input:hover {
+  border-color: #2196F3;
+}
+
+.error-message {
+  color: #f44336;
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 8px;
+  background: #ffebee;
+  border-radius: 4px;
+}
+
+.success-message {
+  color: #4CAF50;
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 8px;
+  background: #e8f5e9;
+  border-radius: 4px;
 }
 
 /* 可点击的行 */

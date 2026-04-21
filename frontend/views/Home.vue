@@ -1,6 +1,12 @@
 <template>
   <div class="container">
-    <h1>📦 收纳记录管理</h1>
+    <div class="header">
+      <h1>📦 收纳记录管理</h1>
+      <div class="user-info">
+        <span class="username">👤 {{ username }}</span>
+        <button @click="logout" class="btn-logout">退出</button>
+      </div>
+    </div>
 
     <!-- 视图切换 -->
     <div class="view-tabs">
@@ -164,7 +170,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { itemAPI } from '../api.js'
 import { Pie, Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -187,8 +193,6 @@ ChartJS.register(
   LinearScale
 )
 
-const API_BASE = '/api'
-
 // 颜色 palette
 const colors = [
   '#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0',
@@ -196,7 +200,7 @@ const colors = [
 ]
 
 export default {
-  name: 'App',
+  name: 'Home',
   components: {
     Pie,
     Bar
@@ -215,6 +219,7 @@ export default {
         quantity: 1,
         notes: ''
       },
+      username: localStorage.getItem('username') || '用户',
       chartOptions: {
         responsive: true,
         maintainAspectRatio: true,
@@ -324,9 +329,14 @@ export default {
     })
   },
   methods: {
+    logout() {
+      localStorage.removeItem('token')
+      localStorage.removeItem('username')
+      this.$router.push('/login')
+    },
     async loadItems() {
       try {
-        const res = await axios.get(`${API_BASE}/items`)
+        const res = await itemAPI.getAll()
         this.items = res.data
       } catch (err) {
         console.error('加载失败:', err)
@@ -338,9 +348,7 @@ export default {
         return
       }
       try {
-        const res = await axios.get(`${API_BASE}/items`, {
-          params: { keyword: this.searchKeyword }
-        })
+        const res = await itemAPI.getAll(this.searchKeyword)
         this.items = res.data
       } catch (err) {
         console.error('搜索失败:', err)
@@ -381,9 +389,9 @@ export default {
     async submitForm() {
       try {
         if (this.editingItem) {
-          await axios.put(`${API_BASE}/items/${this.editingItem.id}`, this.form)
+          await itemAPI.update(this.editingItem.id, this.form)
         } else {
-          await axios.post(`${API_BASE}/items`, this.form)
+          await itemAPI.create(this.form)
         }
         this.closeForm()
         this.loadItems()
@@ -394,7 +402,7 @@ export default {
     async deleteItem(id) {
       if (!confirm('确定要删除这个物品吗？')) return
       try {
-        await axios.delete(`${API_BASE}/items/${id}`)
+        await itemAPI.delete(id)
         this.loadItems()
       } catch (err) {
         console.error('删除失败:', err)
@@ -422,10 +430,44 @@ body {
   padding: 20px;
 }
 
-h1 {
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.header h1 {
   text-align: center;
   color: #333;
-  margin-bottom: 20px;
+  margin: 0;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.username {
+  color: #666;
+  font-size: 14px;
+}
+
+.btn-logout {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-logout:hover {
+  background: #d32f2f;
 }
 
 /* 视图切换标签 */

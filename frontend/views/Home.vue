@@ -26,9 +26,11 @@
         placeholder="搜索物品名称、分类、位置... (回车快速新增)"
         class="search-input"
       />
-      <button @click="exportCSV" class="btn-secondary">📥 导出</button>
-      <button @click="showImportModal = true" class="btn-secondary">📤 导入</button>
-      <button @click="showForm = true" class="btn-primary">+ 新增物品</button>
+      <div class="toolbar-actions">
+        <button @click="exportCSV" class="btn-icon" title="导出 CSV">📥</button>
+        <button @click="showImportModal = true" class="btn-icon" title="导入 CSV">📤</button>
+        <button @click="showForm = true" class="btn-primary">+ 新增物品</button>
+      </div>
     </div>
 
     <!-- 数据看板视图 -->
@@ -603,6 +605,31 @@ body {
   font-size: 14px;
 }
 
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-icon {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: #e3f2fd;
+  border-color: #2196F3;
+}
+
 .btn-primary {
   background: #4CAF50;
   color: white;
@@ -611,29 +638,13 @@ body {
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  height: 40px;
+  display: flex;
+  align-items: center;
 }
 
 .btn-primary:hover {
   background: #45a049;
-}
-
-.btn-secondary {
-  background: #2196F3;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-secondary:hover {
-  background: #1976d2;
-}
-
-.btn-secondary:disabled {
-  background: #bdbdbd;
-  cursor: not-allowed;
 }
 
 /* 数据看板样式 */

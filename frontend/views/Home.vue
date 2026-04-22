@@ -27,8 +27,8 @@
         class="search-input"
       />
       <div class="toolbar-actions">
-        <button @click="exportCSV" class="btn-icon" title="导出 CSV">📥</button>
-        <button @click="showImportModal = true" class="btn-icon" title="导入 CSV">📤</button>
+        <!-- <button @click="exportCSV" class="btn-icon" title="导出 CSV">📥</button>
+        <button @click="showImportModal = true" class="btn-icon" title="导入 CSV">📤</button> -->
         <button @click="showForm = true" class="btn-primary">+ 新增物品</button>
       </div>
     </div>

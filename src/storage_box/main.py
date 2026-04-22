@@ -1,9 +1,12 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import Annotated
 from datetime import timedelta
 from fastapi.responses import JSONResponse, Response as FastAPIResponse
+import os
 
 from .schemas import UserCreate, UserLogin, Token, Item, ItemCreate, ItemUpdate
 from .user_storage import UserStorage
@@ -12,10 +15,14 @@ from .auth import create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_
 
 app = FastAPI(title="收纳记录管理系统", version="2.0.0")
 
-# CORS 配置
+# CORS 配置 - 生产环境限制具体域名
+origins = ["*"]
+if os.getenv("FRONTEND_URL"):
+    origins = [os.getenv("FRONTEND_URL")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -229,3 +236,14 @@ async def import_items(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"导入失败：{str(e)}")
+
+
+# ============== 前端静态文件 ==============
+# 挂载前端构建产物
+frontend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "dist")
+if os.path.exists(frontend_dir):
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+else:
+    @app.get("/")
+    async def root():
+        return {"message": "Storage Box API", "docs": "/docs"}

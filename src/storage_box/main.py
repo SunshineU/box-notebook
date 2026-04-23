@@ -247,3 +247,9 @@ else:
     @app.get("/")
     async def root():
         return {"message": "Storage Box API", "docs": "/docs"}
+
+
+@app.get("/healthz")
+async def health_check():
+    """健康检查端点（用于 Render 等部署平台）"""
+    return {"status": "healthy"}

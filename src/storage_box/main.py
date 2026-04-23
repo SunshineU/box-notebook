@@ -244,22 +244,27 @@ async def import_items(
 # 本地路径：./frontend/dist
 import sys
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.staticfiles import StaticFiles
 
 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 frontend_dir = os.path.join(base_dir, "frontend", "dist")
 
 if os.path.exists(frontend_dir):
-    # 处理 SPA 路由：所有 404 且非 API 路径，返回 index.html
-    @app.exception_handler(StarletteHTTPException)
-    async def spa_exception_handler(request, exc):
-        if exc.status_code == 404:
-            # 如果是 API 路径，返回原始 404
-            if request.url.path.startswith('/api') or request.url.path.startswith('/docs') or request.url.path.startswith('/openapi'):
-                raise exc
-            # 否则返回 index.html 让前端路由处理
-            from fastapi.responses import FileResponse
-            return FileResponse(os.path.join(frontend_dir, 'index.html'))
-        raise exc
+    # 静态资源（JS/CSS/图片等）- 直接服务文件
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dir, "assets")), name="assets")
+
+    # 处理 SPA 路由：只有根路径和未知路径返回 index.html
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # API 路径不处理
+        if full_path.startswith("api/") or full_path in ("docs", "openapi.json", "healthz"):
+            raise StarletteHTTPException(status_code=404)
+        # 静态资源路径不处理
+        if full_path.startswith("assets/"):
+            raise StarletteHTTPException(status_code=404)
+        # 返回 index.html 让前端路由处理
+        from fastapi.responses import FileResponse
+        return FileResponse(os.path.join(frontend_dir, "index.html"))
 else:
     @app.get("/")
     async def root():

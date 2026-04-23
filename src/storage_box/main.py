@@ -240,7 +240,11 @@ async def import_items(
 
 # ============== 前端静态文件 ==============
 # 挂载前端构建产物
-frontend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "dist")
+# Render 路径：/opt/render/project/src/frontend/dist
+# 本地路径：./frontend/dist
+import sys
+base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+frontend_dir = os.path.join(base_dir, "frontend", "dist")
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 else:

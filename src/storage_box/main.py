@@ -243,10 +243,23 @@ async def import_items(
 # Render 路径：/opt/render/project/src/frontend/dist
 # 本地路径：./frontend/dist
 import sys
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 frontend_dir = os.path.join(base_dir, "frontend", "dist")
+
 if os.path.exists(frontend_dir):
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+    # 处理 SPA 路由：所有 404 且非 API 路径，返回 index.html
+    @app.exception_handler(StarletteHTTPException)
+    async def spa_exception_handler(request, exc):
+        if exc.status_code == 404:
+            # 如果是 API 路径，返回原始 404
+            if request.url.path.startswith('/api') or request.url.path.startswith('/docs') or request.url.path.startswith('/openapi'):
+                raise exc
+            # 否则返回 index.html 让前端路由处理
+            from fastapi.responses import FileResponse
+            return FileResponse(os.path.join(frontend_dir, 'index.html'))
+        raise exc
 else:
     @app.get("/")
     async def root():

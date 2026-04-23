@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const API_BASE = '/api'
+// 生产环境：API 和前端在同一域名下
+// 开发环境：vite.config.js 代理 /api 到后端
+const API_BASE = '/'
 
 // 创建 axios 实例
 const api = axios.create({
